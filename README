@@ -1,0 +1,13 @@
+
+DOUBLE-PRECISION VERSION
+source /glade/u/home/bachman/.chapel_QG_64
+chpl -srp=64 -scp=128 -lfftw3 -lnetcdf -L/glade/u/apps/ch/opt/fftw/3.3.9/gnu/10.1.0/lib -L/glade/u/apps/ch/opt/netcdf/4.8.1/gnu/10.1.0/lib -I/glade/u/apps/ch/opt/fftw/3.3.9/gnu/10.1.0/include -I/glade/u/apps/ch/opt/netcdf/4.8.1/gnu/10.1.0/include --ldflags="-Wl,-rpath,/glade/u/apps/ch/opt/fftw/3.3.9/gnu/10.1.0/lib -Wl,-rpath,/glade/u/apps/ch/opt/netcdf/4.8.1/gnu/10.1.0/lib" Chap2D_Driver.chpl --fast
+
+SINGLE-PRECISION VERSION
+source /glade/u/home/bachman/.chapel_QG_32
+chpl -srp=32 -scp=64 -lfftw3f -lnetcdf -L/glade/u/apps/ch/opt/fftw/3.3.8/gnu/8.3.0/lib -L/glade/u/apps/ch/opt/netcdf/4.8.1/gnu/10.1.0/lib -I/glade/u/apps/ch/opt/fftw/3.3.8/gnu/8.3.0/include -I/glade/u/apps/ch/opt/netcdf/4.8.1/gnu/10.1.0/include --ldflags="-Wl,-rpath,/glade/u/apps/ch/opt/fftw/3.3.8/gnu/8.3.0/lib -Wl,-rpath,/glade/u/apps/ch/opt/netcdf/4.8.1/gnu/10.1.0/lib" Chap2D_Driver.chpl --fast
+
+ARRAY ORIENTATION
+Physical space variables stored in (nz,ny,nx) arrays. This is to allow passing by reference and to be compatible with C-pointers in FFTW without slicing.
+Spectral space variables stored in (nz,ny,nx/2+1) arrays.
+
