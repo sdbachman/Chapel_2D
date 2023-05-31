@@ -155,24 +155,12 @@ proc TimeStep() {
       err_hat = be[1]*(N1+L1)+be[3]*(N3+L3)
                +be[4]*(N4+L4)+be[5]*(N5+L5)+be[6]*(N6+L6);
 
-/*
-var tmpp = be[1]*(N1+L1)+be[3]*(N3+L3);
-var tmpp2 = be[4]*(N4+L4)+be[5]*(N5+L5)+be[6]*(N6+L6);
-print_array_2D(tmpp);
-writeln();
-print_array_2D(tmpp2);
-writeln();
-print_array_2D(err_hat);
-exit();
-*/
-
       execute_backward_FFTs(err_hat, err);
 
       //print_array_2D(err);
       //writeln();
 
       err1 = dt*(max reduce (abs(err)))/(nx*ny);
-//      writeln(err1);
 
       if (err1 > TOL) {
           dt = 0.85*dt;
@@ -189,17 +177,8 @@ exit();
 
       q_hat[0,0] = 0;
 
-//var tt = dt*(b[1]*(N1+L1)+b[3]*(N3+L3)
-//                                         +b[4]*(N4+L4)+b[5]*(N5+L5)
-//                                         +b[6]*(N6+L6));
-//print_array_2D(tt);
-//writeln();
-
-
         // Increment t, change dt, and reset err0 and reject only on Locale 0
           t = t + dt;
-
- //         writeln(dt, " ", t);
 
           StochPert(q_pert);
 
