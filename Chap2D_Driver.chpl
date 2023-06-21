@@ -15,8 +15,6 @@ config const num_iters = 1;
 
 proc main() {
 
-  var timings : [1..num_iters] real;
-
   for itr in 1..num_iters do {
 
     Initialize();
@@ -26,28 +24,12 @@ proc main() {
 
     for i in (Nt_start+1)..(Nt_start+Nt) {
 
-      //var t0 : stopwatch;
-      //t0.start();
-
       TimeStep();
-
-      //DeAlias(q_hat);
 
       Diagnostics(i);
 
-     //t0.stop();
-     //writeln(t0.elapsed());
-     //t0.clear();
-
     } // Timestepping loop
 
-    timings[itr] = t0.elapsed();
-    t0.clear();
-
-} // iter
-
-writeln(timings[1..]);
-var time_mean = (+ reduce timings[1..]) / num_iters;
-writeln(time_mean);
+  } // iter
 
 } // main

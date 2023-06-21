@@ -100,4 +100,6 @@ use domains;
   var pert_spec : [D_hat] complex(cp);
   var pert_phys : [D] real(rp);
   var q_pert : [D_hat] complex(cp);
+  var q_pert_old : [D_hat] complex(cp);
+  var q_pert_new : [D_hat] complex(cp);
 

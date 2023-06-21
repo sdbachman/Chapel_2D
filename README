@@ -11,3 +11,5 @@ ARRAY ORIENTATION
 Physical space variables stored in (nz,ny,nx) arrays. This is to allow passing by reference and to be compatible with C-pointers in FFTW without slicing.
 Spectral space variables stored in (nz,ny,nx/2+1) arrays.
 
+THIS CREATES NICE TURBULENT JETS
+./Chap2D_Driver --U_DIAG_FREQ=1000 --V_DIAG_FREQ=1000 --Q_DIAG_FREQ=1000 --A2=0 --Leith_coeff=1 --Leith_order=2 --Smag_order=-8 --Smag_coeff=0 --Nt=500000 --beta_y=2e-9 --beta_x=2e-9 --nx=384 --ny=384 --TOL=1e-10 --Lx=1.3824e7 --Ly=1.3824e7 --F0=1e-5 --C_d=0

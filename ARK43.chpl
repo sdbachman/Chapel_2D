@@ -74,24 +74,32 @@ proc set_ARK43_vars() {
 proc TimeStep() {
 
   /* Leith scaling for hyperviscosity */
-  forall (j,k) in D_hat {
-    qL_tmp[j,k] = kL[j,k] * abs(q_hat[j,k])**2;
-  }
+    forall (j,k) in D_hat {
+      qL_tmp[j,k] = kL[j,k] * abs(q_hat[j,k])**2;
+    }
 
   /* Smag scaling for hypoviscosity */
-  GetPsi(q_hat);
-  forall (j,k) in D_hat {
-    qS_tmp[j,k] = kS[j,k] * k2[j,k] * abs(psi_hat[j,k])**2;
-  }
+    GetPsi(q_hat);
+    forall (j,k) in D_hat {
+      qS_tmp[j,k] = kS[j,k] * k2[j,k] * abs(psi_hat[j,k])**2;
+    }
 
   /* Quadratic bottom drag scaling */
-  forall (j,k) in D_hat {
-    qD_tmp[j,k] = k2[j,k] * abs(psi_hat[j,k])**2;
-  }
+    forall (j,k) in D_hat {
+      qD_tmp[j,k] = k2[j,k] * abs(psi_hat[j,k])**2;
+    }
 
   AL = Leith_coeff * ( (Lx/(nx*pi))**(3*Leith_order/2)    * sqrt( 2*( + reduce (qL_tmp*k_gt_forcing) )) / (nx*ny)  ) : real(rp);
   AS = Smag_coeff *  ( (Lx/pi     )**((3*Smag_order-2)/2) * sqrt( 2*( + reduce (qS_tmp*k_lt_forcing) )) / (nx*ny)  ) : real(rp);
   AD = C_d * sqrt(2* (+ reduce qD_tmp));
+
+  /* Stochastic forcing */
+    StochPert(q_pert_new);
+
+    q_pert = F_corr * q_pert_old + sqrt(1 - F_corr**2) * q_pert_new;
+    var pert_sum = + reduce (abs(q_pert)**2);
+    q_pert = sqrt(F0) * q_pert / sqrt(pert_sum);
+    q_pert_old = q_pert;
 
   /* First RK stage, t=0 */
     GetRHS(q_hat, N1);
@@ -102,16 +110,13 @@ proc TimeStep() {
 
   do {
     forall (j,k) in D_hat {
-      Mq[j,k] = 1.0/(1.0 + 0.25*dt*(AD + A2*k2[j,k] + AS*kS[j,k] + AL*kL[j,k]));
+      Mq[j,k] = 1.0/(1.0 + 0.25*dt*(AD + A2*k2[j,k] + AS*kS[j,k] + AL*kL[j,k])); // - beta_x*1i*kx[j,k]*ik2[j,k]));
     }
 
     /* Second RK stage */
       forall (j,k) in D_hat {
         q_tmp[j,k] = Mq[j,k]*(q_hat[j,k] + dt*(ae[2,1]*N1[j,k]+ai[2,1]*L1[j,k]));
       }
-
-      //print_array_2D(q_hat);
-      //writeln();
 
       GetRHS(q_tmp,N2);
       forall (j,k) in D_hat {
@@ -155,24 +160,10 @@ proc TimeStep() {
       err_hat = be[1]*(N1+L1)+be[3]*(N3+L3)
                +be[4]*(N4+L4)+be[5]*(N5+L5)+be[6]*(N6+L6);
 
-/*
-var tmpp = be[1]*(N1+L1)+be[3]*(N3+L3);
-var tmpp2 = be[4]*(N4+L4)+be[5]*(N5+L5)+be[6]*(N6+L6);
-print_array_2D(tmpp);
-writeln();
-print_array_2D(tmpp2);
-writeln();
-print_array_2D(err_hat);
-exit();
-*/
-
       execute_backward_FFTs(err_hat, err);
+      normalize(err);
 
-      //print_array_2D(err);
-      //writeln();
-
-      err1 = dt*(max reduce (abs(err)))/(nx*ny);
-//      writeln(err1);
+      err1 = dt*(max reduce (abs(err)));
 
       if (err1 > TOL) {
           dt = 0.85*dt;
@@ -189,25 +180,8 @@ exit();
 
       q_hat[0,0] = 0;
 
-//var tt = dt*(b[1]*(N1+L1)+b[3]*(N3+L3)
-//                                         +b[4]*(N4+L4)+b[5]*(N5+L5)
-//                                         +b[6]*(N6+L6));
-//print_array_2D(tt);
-//writeln();
-
-
         // Increment t, change dt, and reset err0 and reject only on Locale 0
           t = t + dt;
-
- //         writeln(dt, " ", t);
-
-          StochPert(q_pert);
-
-          var pert_sum = + reduce (abs(q_pert)**2);
-          q_pert = sqrt(F0) * q_pert / sqrt(pert_sum);
-          pert_sum = + reduce (abs(q_pert)**2);
-
-          q_hat = q_hat + sqrt(dt)*q_pert;
 
           /* Stepsize adjustment PI.3.4, divide by 4 for 4th order method with 3rd embedded */
           dt = min(dt*((0.75*TOL/err1)**0.075)*((err0/err1)**0.1), 1e8);  //dt_max

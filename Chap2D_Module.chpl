@@ -30,8 +30,6 @@ proc Initialize() {
     create_initial_state(q);
   }
 
-  //load_1layer_test(q);
-
   read_background_state(background_file);
 
 
@@ -69,6 +67,8 @@ proc Initialize() {
 
     /* Initialize mask for stochastic forcing */
       set_StochSpec(stoch_spec);
+    /* Create an initial forcing */
+      StochPert(q_pert_old);
 
     /* Set up Fourier Transforms */
       set_up_forward_FFTs();
@@ -128,12 +128,6 @@ proc Jacobian(ref q_in : [] complex(cp), ref jaco_hat : [] complex(cp)) {
       v_hat[j,k] = 1i*kx[j,k]*psi_hat[j,k];
     }
 
-//if (t > 1e-10) {
-//print_array_2D(q_in);
-//exit();
-//}
-
-
   /* Get u, v, q */
     execute_backward_FFTs(q_in, q_phys);
     normalize(q_phys);
@@ -143,7 +137,6 @@ proc Jacobian(ref q_in : [] complex(cp), ref jaco_hat : [] complex(cp)) {
 
     execute_backward_FFTs(v_hat, v_phys);
     normalize(v_phys);
-
 
     forall (j,k) in D {
       uq_phys[j,k] = u_phys[j,k]*q_phys[j,k];
@@ -163,45 +156,9 @@ proc Jacobian(ref q_in : [] complex(cp), ref jaco_hat : [] complex(cp)) {
 
 }
 
-
-////////////////////////////////////////////////////////////////
-//            GetQUV computes real-valued fields              //
-//      I put it in a subroutine because I use it in 2        //
-//                   separate locations                       //
-////////////////////////////////////////////////////////////////
-proc GetTQUV(ref q_in : [] complex(cp)) {
-
-    execute_backward_FFTs(q_in, q_phys);
-    normalize(q_phys);
-
-    u_hat = -1i*ky*(-ik2)*q_hat;
-    v_hat = 1i*kx*(-ik2)*q_hat;
-
-    execute_backward_FFTs(u_hat, u_phys);
-    normalize(u_phys);
-
-    execute_backward_FFTs(v_hat, v_phys);
-    normalize(v_phys);
-
-/*    ! Get q
-    spec = q_hat
-    call dfftw_execute_dft_c2r(c2r,spec,phys)
-    q_phys = phys/real(nx*ny,dp)
-    ! Get u
-    spec =-cmplx(0._dp,1._dp)*ky*(-ik2)*q_hat
-    call dfftw_execute_dft_c2r(c2r,spec,phys)
-    u_phys = phys/real(nx*ny,dp)
-    ! Get v
-    spec = cmplx(0._dp,1._dp)*kx*(-ik2)*q_hat
-    call dfftw_execute_dft_c2r(c2r,spec,phys)
-    v_phys = phys/real(nx*ny,dp)
-*/
-
-}
-
 ////////////////////////////////////////////////////////////////
 //                  GetRHS: computes FFT of                   //
-//     -J[psi,q]-uBar*qx-(beta+qyBar)*v-nu*del[q]             //
+//     -J[psi,q]-uBar*qx-(beta_x+qyBar)*v-beta_y*u-nu*del[q]             //
 ////////////////////////////////////////////////////////////////
 
 proc GetRHS(ref q_in : [] complex(cp), ref RHS : [] complex(cp)) {
@@ -212,7 +169,8 @@ proc GetRHS(ref q_in : [] complex(cp), ref RHS : [] complex(cp)) {
   /* Mean advection, beta and viscosity */
     forall (j,k) in D_hat {
       RHS[j,k] = RHS[j,k] - uBar*1i*kx[j,k]*q_in[j,k]
-                 - (beta + qyBar)*v_hat[j,k];
+                - (beta_x + qyBar)*v_hat[j,k] - beta_y*u_hat[j,k]
+                + q_pert[j,k];
     }
 
   /* Quadratic drag */
@@ -248,7 +206,7 @@ proc GetRHS(ref q_in : [] complex(cp), ref RHS : [] complex(cp)) {
 proc GetPsi(ref in_arr : [] complex(cp)) {
 
   forall (j,k) in D_hat {
-    psi_hat[j,k] = in_arr[j,k]/(-k2[j,k]);
+    psi_hat[j,k] = -ik2[j,k] * in_arr[j,k];
   }
   psi_hat[0,0] = 0;
 
@@ -261,23 +219,12 @@ proc GetPsi(ref in_arr : [] complex(cp)) {
 
 proc create_initial_state(ref in_arr : [?dom] real(rp)) {
 
-  var D = dom.localSubdomain();
-  var tmp = in_arr.localSlice(D);
-
-  for (j,k) in D {
-    tmp[j,k] = 1e-5*sin(7.0*pi*(k-1) / nx) : real(rp);
-    tmp[j,k] = tmp[j,k] + 2e-5*cos(14.0*pi*(j-1) / ny) : real(rp);
-  }
-
-  in_arr[D] = tmp;
-/*
   var seed=17+(here.id : int);
   var tmp : [dom] real(rp);
   fillRandom(tmp, seed);
 
   tmp = 1e-5*(tmp - (+ reduce tmp)/(dom.size));
   in_arr[D] = tmp;
-*/
 }
 
 
@@ -317,7 +264,8 @@ proc StochPert(ref zeta_hat : [?dom] complex(cp)) {
   pert_spec = stoch_spec * (specr + 1i*speci);
 
 /*
-  // IFFT to psi perturbation
+  // IFFT to create localized forcing, if desired
+  // If so, need to create a mask, MR
     execute_backward_FFTs(pert_spec, pert_phys);
     normalize(pert_phys);
   // Localize spatially
@@ -325,9 +273,6 @@ proc StochPert(ref zeta_hat : [?dom] complex(cp)) {
   // FFT
   execute_forward_FFTs(pert_phys, pert_spec);
 */
-
-//  print_array_2D(pert_spec);
-//  exit();
 
   // Laplacian to get q perturbation
   zeta_hat = -k2 * pert_spec;
@@ -362,13 +307,14 @@ proc set_StochSpec(ref ss : [?dom] complex(cp)) {
     k = forcing_wavenumber / kMin_domain;
   }
 
-  var kp = ceil(k);
-  var km = floor(k);
+  var kp = ceil(k)+2;
+  var km = floor(k)-2;
 
   var forcing_kp = kp*(2*pi/Lx);
   var forcing_km = km*(2*pi/Lx);
 
   writeln("Forcing wavenumber (lambda / kMin): ", k);
+  writeln("Forcing lengthscale: ", 2*pi/(k*kMin_domain));
 
   forall (j,k) in D_hat {
     if ( ((forcing_km**2)<=k2[j,k]) && (k2[j,k]<=(forcing_kp**2)) ) {
@@ -391,13 +337,4 @@ proc set_StochSpec(ref ss : [?dom] complex(cp)) {
     }
   }
 
-/*
-  ss = 0;
-  forall (j,k) in D_hat {
-    if ( ((kMin**2)<=k2[j,k]) && (k2[j,k]<=(kMax**2)) ) {
-      ss[j,k] = 1.0 / sqrt(k2[j,k]);
-    }
-  }
-  ss[0,0] = 0;
-*/
 }

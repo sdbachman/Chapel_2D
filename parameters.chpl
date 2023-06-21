@@ -15,11 +15,11 @@ config const background_file = "background_2D.nc1";
 config var Nt_start : int = 0;
 config var Nt : int = 10000;
 config var t : real(rp) = 0;
-config var dt : real(rp) = 6e2;
+config var dt : real(rp) = 1e-3;
 
 /* Domain, meters */
-config const Lx : real(rp) = 1.008e7;
-config const Ly : real(rp) = 1.008e7;
+config const Lx : real(rp) = 1;
+config const Ly : real(rp) = 1;
 
 /* Grid: Horizontal part must be divisible by 3. */
 config const nx : int  = 1008;
@@ -32,20 +32,24 @@ var ny2p : int = (ny/2)+1;
 var ny3p2 : int = (2*(ny/3)+1);
 
 /* Coriolis coefficients */
-config const beta : real(rp) = 0.0;
+config const beta_x : real(rp) = 0.0;
+config const beta_y : real(rp) = 0.0;
 
 /* Viscosities */
-config const A2 : real(rp) = 88;
+config const A2 : real(rp) = 0;
 config const Leith_order : real(rp) = 8;
 config const Leith_coeff : real(rp) = 0;
 config const Smag_order : real(rp) = -8;
-config const Smag_coeff : real(rp) = 0.0;
+config const Smag_coeff : real(rp) =  0;
 
 /* Forcing wavenumber */
 config const forcing_k : real(rp);
 
 /* F0 is the enstrophy injection rate (s-2) */
 config const F0 : real(rp) = 1.75e-13;
+
+/* F_corr is the correlation coefficient between the old forcing and the new */
+config const F_corr = 0.99;
 
 /* Quadratic drag parameter. C_d = c_d/h_BL where h_BL is the bottom
    boundary layer thickness. This is the drag felt by the barotropic mode,
@@ -57,4 +61,4 @@ config const C_d : real(rp) = 1.25e-8;
 config const TOL : real(rp) = 1e-8;
 
 /* CFL for the fastest Rossby wave = 1 / (10 * frequency) */
-config const dt_max : real(rp) = 0.2 * pi / (beta * Lx);
+config const dt_max : real(rp) = 0.2 * pi / (beta_x * Lx);
