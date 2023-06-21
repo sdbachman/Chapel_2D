@@ -225,6 +225,7 @@ proc create_initial_state(ref in_arr : [?dom] real(rp)) {
 
   tmp = 1e-5*(tmp - (+ reduce tmp)/(dom.size));
   in_arr[D] = tmp;
+
 }
 
 

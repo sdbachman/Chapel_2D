@@ -11,25 +11,16 @@ use FFT_utils;
 use Time;
 use IO;
 
-config const num_iters = 1;
-
 proc main() {
 
-  for itr in 1..num_iters do {
+  Initialize();
 
-    Initialize();
+  for i in (Nt_start+1)..(Nt_start+Nt) {
 
-    var t0 : stopwatch;
-    t0.start();
+    TimeStep();
 
-    for i in (Nt_start+1)..(Nt_start+Nt) {
+    Diagnostics(i);
 
-      TimeStep();
-
-      Diagnostics(i);
-
-    } // Timestepping loop
-
-  } // iter
+  } // Timestepping loop
 
 } // main
